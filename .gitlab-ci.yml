@@ -1,0 +1,50 @@
+# .gitlab-ci.yml
+# @author Adrian Heissler
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+
+variables:
+  BASE_PATH: "${CI_PROJECT_DIR}/vsphere"
+  INPUT_PATH: ""
+  BUILD_ONLY: ""
+
+stages:
+  - deploy
+
+.packer-build:
+  stage: deploy
+  before_script:
+    - packer init ${INPUT_PATH}
+    - |
+      packer validate \
+      -var-file="vsphere/build.pkrvars.hcl" \
+      -var-file="vsphere/common.pkrvars.hcl" \
+      -var-file="vsphere/network.pkrvars.hcl" \
+      -var-file="vsphere/vsphere.pkrvars.hcl" \
+      ${INPUT_PATH}
+  script:
+    - |
+      packer build -force -on-error=ask \
+      -var-file="vsphere/build.pkrvars.hcl" \
+      -var-file="vsphere/common.pkrvars.hcl" \
+      -var-file="vsphere/network.pkrvars.hcl" \
+      -var-file="vsphere/vsphere.pkrvars.hcl" \
+      ${BUILD_ONLY} ${INPUT_PATH}
+  artifacts:
+    paths:
+      - manifests/*.json
+  when: manual
+
+ubuntu-server-22-04-lts:
+  extends: .packer-build
+  variables:
+    INPUT_PATH: "${BASE_PATH}/linux/ubuntu/22-04-lts/"
+
+windows-server-2022-standard:
+  extends: .packer-build
+  variables:
+    INPUT_PATH: "${BASE_PATH}/windows/server/2022/"
+#    BUILD_ONLY: "--only vsphere-iso.windows-server-standard-dexp,vsphere-iso.windows-server-standard-core"
+    BUILD_ONLY: "--only vsphere-iso.windows-server-standard-dexp"
