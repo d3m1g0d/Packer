@@ -4,6 +4,7 @@
 workflow:
   rules:
     - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == 'schedule'
 
 variables:
   BASE_PATH: "${CI_PROJECT_DIR}/vsphere"
@@ -11,7 +12,14 @@ variables:
   BUILD_ONLY: ""
 
 stages:
+  - prereq
   - deploy
+
+binaries:
+  stage: prereq
+  script: 
+    - packer version
+    - mkisofs -version
 
 .packer-build:
   stage: deploy
@@ -35,7 +43,6 @@ stages:
   artifacts:
     paths:
       - manifests/*.json
-  when: manual
 
 ubuntu-server-22-04-lts:
   extends: .packer-build
